@@ -1,6 +1,7 @@
 <?php
 /*
 Amantle Keamogetse Temo u23539764
+Aundrea Ncube u22747363
 */
 
 header('Access-Control-Allow-Origin: *');
