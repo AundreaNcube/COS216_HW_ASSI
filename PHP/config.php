@@ -2,6 +2,7 @@
 
 /*
 Amantle Keamogetse Temo u23539764 
+Aundrea Ncube u22747363
 */
 if (session_status() === PHP_SESSION_NONE) {
     session_start([
