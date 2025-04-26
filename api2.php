@@ -1,7 +1,7 @@
 <?php
 /*
 Amantle Keamogetse Temo u23539764
-Aundrea Ncube u22747363
+Aundrea Nandie Ncube u22747363
 */
 
 header('Access-Control-Allow-Origin: *');
@@ -14,7 +14,7 @@ ini_set('display_errors', 1);
 ini_set('log_errors', 1);
 
 // require_once __DIR__ . "/COS216/HA/PHP/config.php";
-require_once __DIR__ . "/PHP/config.php";
+require_once __DIR__ . "/PHP/config.php";   // this is @AundreaNcube 's relative path to the config.php file
 
 class Database
 {
@@ -130,11 +130,11 @@ class HandleRequest
                 $response = $handler->process($input);
                 $this->sendResponse(200, $response);
                 break;
-            case 'CreateDrone':
-                $handler = new CreateDrone();
-                $response = $handler->process($input);
-                $this->sendResponse(200, $response);
-                break;
+                case 'CreateDrone':
+                    $handler = new CreateDrone();
+                    $response = $handler->process($input);  // Make sure $input is being passed
+                    $this->sendResponse(200, $response);
+                    break;
             case 'UpdateDrone':
                 $handler = new UpdateDrone();
                 $response = $handler->process($input);
@@ -879,302 +879,280 @@ class GetAllOrders
     }
 }
 
-/* class to create a drone in the database, */
-
-class CreateDrone
-{
-    public function process($data)
-    {
+class CreateDrone {
+    public function process($data) {
         $this->validate($data);
+        
         return $this->createDrone($data);
     }
-
-    private function validate($data)
-    {
+    
+    private function validate($data) {
         $required = ['apikey', 'type'];
         foreach ($required as $field) {
             if (empty($data[$field])) {
                 throw new Exception("Field '$field' is required", 400);
             }
         }
-
-        // Check if user is authorized (e.g., admin or inventory manager)
-        $userInfo = $this->getUserInfoFromApiKey($data['apikey']);
-        if ($userInfo['user_type'] !== 'Distributor') {
-            throw new Exception("Only inventory managers can create drones", 403);
+        
+        // Validate API key and user type (only Couriers can create drones)
+        $userInfo = $this->validateApiKey($data['apikey']);
+        if ($userInfo['user_type'] !== 'Courier') {
+            throw new Exception("Only couriers can create drones", 403);
         }
     }
-
-    private function createDrone($data)
-    {
+    
+    private function validateApiKey($apiKey) {
         $db = Database::getInstance();
         $conn = $db->getConnection();
-
-        // Default values for new drone
-        $isAvailable = true;
-        $batteryLevel = 100; // Start with full battery
-
-        $stmt = $conn->prepare("INSERT INTO drones (is_available, battery_level) VALUES (?, ?)");
-        $stmt->bind_param("ii", $isAvailable, $batteryLevel);
+        $stmt = $conn->prepare("SELECT id, user_type FROM users WHERE api_key = ?");
+        $stmt->bind_param("s", $apiKey);
         $stmt->execute();
-
+        $result = $stmt->get_result();
+        if ($result->num_rows === 0) {
+            throw new Exception("Invalid API key", 401);
+        }
+        return $result->fetch_assoc();
+    }
+    
+    private function createDrone($data) {
+        $db = Database::getInstance();
+        $conn = $db->getConnection();
+        
+        // Get user ID from API keyin the users table , USE COURIER only
+        $userInfo = $this->validateApiKey($data['apikey']);
+        
+        // Default drone location (HQ coordinates), @AKT-TECH49-DEV feel free to change this
+        $hqLat = -25.7545;
+        $hqLng = 28.2314;
+        
+        $stmt = $conn->prepare("
+            INSERT INTO drones 
+            (current_operator_id, is_available, latest_latitude, latest_longitude, altitude, battery_level) 
+            VALUES (?, 1, ?, ?, 0, 100)
+        ");
+        $stmt->bind_param("idd", $userInfo['id'], $hqLat, $hqLng);
+        $stmt->execute();
         $droneId = $conn->insert_id;
-
+        
         return [
             'status' => 'success',
             'timestamp' => round(microtime(true) * 1000),
             'data' => [
-                'drone_id' => $droneId,
-                'message' => 'Drone created successfully'
+                'id' => $droneId,
+                'current_operator_id' => $userInfo['id'],
+                'is_available' => true,
+                'latest_latitude' => $hqLat,
+                'latest_longitude' => $hqLng,
+                'altitude' => 0,
+                'battery_level' => 100
             ]
         ];
     }
-
-    private function getUserInfoFromApiKey($apiKey)
-    {
-        $db = Database::getInstance();
-        $conn = $db->getConnection();
-
-        $stmt = $conn->prepare("SELECT id, user_type FROM users WHERE api_key = ?");
-        $stmt->bind_param("s", $apiKey);
-        $stmt->execute();
-        $result = $stmt->get_result();
-
-        if ($result->num_rows === 0) {
-            throw new Exception("Invalid API key", 401);
-        }
-
-        return $result->fetch_assoc();
-    }
 }
 
-/* update drone class */
-
-class UpdateDrone
-{
-    public function process($data)
-    {
+class UpdateDrone {
+    public function process($data) {
         $this->validate($data);
         return $this->updateDrone($data);
     }
-
-    private function validate($data)
-    {
-        $required = ['apikey', 'type', 'drone_id'];
+    
+    private function validate($data) {
+        $required = ['apikey', 'type', 'id'];
         foreach ($required as $field) {
             if (empty($data[$field])) {
                 throw new Exception("Field '$field' is required", 400);
             }
         }
-
-        if (isset($data['current_operator_id']) && !is_numeric($data['current_operator_id'])) {
-            throw new Exception("Invalid operator ID", 400);
+        
+        $userInfo = $this->validateApiKey($data['apikey']);
+        if ($userInfo['user_type'] !== 'Courier') {
+            throw new Exception("Only couriers can update drones", 403);
         }
-
-        if (isset($data['is_available']) && !is_bool($data['is_available'])) {
-            throw new Exception("is_available must be boolean", 400);
-        }
-
-        if (isset($data['latitude']) && !is_numeric($data['latitude'])) {
-            throw new Exception("Invalid latitude", 400);
-        }
-
-        if (isset($data['longitude']) && !is_numeric($data['longitude'])) {
-            throw new Exception("Invalid longitude", 400);
-        }
-
-        if (isset($data['altitude']) && !is_numeric($data['altitude'])) {
-            throw new Exception("Invalid altitude", 400);
-        }
-
-        if (isset($data['battery_level']) && (!is_numeric($data['battery_level']) ||
-            $data['battery_level'] < 0 || $data['battery_level'] > 100)) {
+        
+        $this->validateDroneAccess($userInfo['id'], $data['id'], $data['current_operator_id'] ?? null);
+        
+        // Validate battery level
+        if (isset($data['battery_level']) && ($data['battery_level'] < 0 || $data['battery_level'] > 100)) {
             throw new Exception("Battery level must be between 0 and 100", 400);
         }
+        
+        if (isset($data['altitude']) && $data['altitude'] < 0) {
+            throw new Exception("Altitude cannot be negative", 400);
+        }
     }
-
-    private function updateDrone($data)
-    {
+    
+    private function validateApiKey($apiKey) {
         $db = Database::getInstance();
         $conn = $db->getConnection();
-
-        // Get user info
-        $userInfo = $this->getUserInfoFromApiKey($data['apikey']);
-
-        // Build update query
-        $updates = [];
-        $params = [];
-        $types = "";
-
-        if (isset($data['current_operator_id'])) {
-            // Only couriers can be assigned as operators
-            if ($data['current_operator_id'] != 0) {
-                $operatorType = $this->getUserType($data['current_operator_id']);
-                if ($operatorType !== 'Courier') {
-                    throw new Exception("Only couriers can operate drones", 400);
-                }
-            }
-
-            $updates[] = "current_operator_id = ?";
-            $params[] = $data['current_operator_id'] == 0 ? null : $data['current_operator_id'];
-            $types .= "i";
-        }
-
-        if (isset($data['is_available'])) {
-            $updates[] = "is_available = ?";
-            $params[] = $data['is_available'] ? 1 : 0;
-            $types .= "i";
-        }
-
-        if (isset($data['latitude'])) {
-            $updates[] = "latest_latitude = ?";
-            $params[] = $data['latitude'];
-            $types .= "d";
-        }
-
-        if (isset($data['longitude'])) {
-            $updates[] = "latest_longitude = ?";
-            $params[] = $data['longitude'];
-            $types .= "d";
-        }
-
-        if (isset($data['altitude'])) {
-            $updates[] = "altitude = ?";
-            $params[] = $data['altitude'];
-            $types .= "d";
-        }
-
-        if (isset($data['battery_level'])) {
-            $updates[] = "battery_level = ?";
-            $params[] = $data['battery_level'];
-            $types .= "i";
-        }
-
-        if (empty($updates)) {
-            throw new Exception("No fields to update", 400);
-        }
-
-        // Add drone_id to params
-        $params[] = $data['drone_id'];
-        $types .= "i";
-
-        $query = "UPDATE drones SET " . implode(", ", $updates) . " WHERE id = ?";
-        $stmt = $conn->prepare($query);
-        $stmt->bind_param($types, ...$params);
-        $stmt->execute();
-
-        if ($stmt->affected_rows === 0) {
-            throw new Exception("Drone not found or no changes made", 404);
-        }
-
-        return [
-            'status' => 'success',
-            'timestamp' => round(microtime(true) * 1000),
-            'data' => ['message' => 'Drone updated successfully']
-        ];
-    }
-
-    private function getUserInfoFromApiKey($apiKey)
-    {
-        $db = Database::getInstance();
-        $conn = $db->getConnection();
-
         $stmt = $conn->prepare("SELECT id, user_type FROM users WHERE api_key = ?");
         $stmt->bind_param("s", $apiKey);
         $stmt->execute();
         $result = $stmt->get_result();
-
         if ($result->num_rows === 0) {
             throw new Exception("Invalid API key", 401);
         }
-
         return $result->fetch_assoc();
     }
-
-    private function getUserType($userId)
-    {
+    
+    private function validateDroneAccess($userId, $droneId, $newOperatorId) {
         $db = Database::getInstance();
         $conn = $db->getConnection();
-
-        $stmt = $conn->prepare("SELECT user_type FROM users WHERE id = ?");
-        $stmt->bind_param("i", $userId);
+        $stmt = $conn->prepare("SELECT current_operator_id FROM drones WHERE id = ?");
+        $stmt->bind_param("i", $droneId);
         $stmt->execute();
         $result = $stmt->get_result();
-
         if ($result->num_rows === 0) {
-            throw new Exception("User not found", 404);
+            throw new Exception("Drone not found", 404);
         }
-
-        $user = $result->fetch_assoc();
-        return $user['user_type'];
+        $drone = $result->fetch_assoc();
+        
+        if ($newOperatorId !== null && $newOperatorId != $drone['current_operator_id']) {
+            $stmt = $conn->prepare("SELECT user_type FROM users WHERE id = ?");
+            $stmt->bind_param("i", $newOperatorId);
+            $stmt->execute();
+            $result = $stmt->get_result();
+            if ($result->num_rows === 0) {
+                throw new Exception("New operator not found", 404);
+            }
+            $newOperator = $result->fetch_assoc();
+            if ($newOperator['user_type'] !== 'Courier') {
+                throw new Exception("New operator must be a courier", 400);
+            }
+        }
+        
+        if ($drone['current_operator_id'] != $userId) {
+            throw new Exception("You don't have permission to update this drone", 403);
+        }
+    }
+    
+    private function updateDrone($data) {
+        $db = Database::getInstance();
+        $conn = $db->getConnection();
+        
+        $updateFields = [];
+        $params = [];
+        $types = "";
+        
+        if (isset($data['operator_id'])) {
+            $updateFields[] = "current_operator_id = ?";
+            $params[] = $data['operator_id'];
+            $types .= "i";
+        }
+        
+        if (isset($data['is_available'])) {
+            $updateFields[] = "is_available = ?";
+            $params[] = $data['is_available'] ? 1 : 0;
+            $types .= "i";
+        }
+        
+        if (isset($data['latitude'])) {
+            $updateFields[] = "latest_latitude = ?";
+            $params[] = $data['latitude'];
+            $types .= "d";
+        }
+        
+        if (isset($data['longitude'])) {
+            $updateFields[] = "latest_longitude = ?";
+            $params[] = $data['longitude'];
+            $types .= "d";
+        }
+        
+        if (isset($data['altitude'])) {
+            $updateFields[] = "altitude = ?";
+            $params[] = $data['altitude'];
+            $types .= "d";
+        }
+        
+        if (isset($data['battery_level'])) {
+            $updateFields[] = "battery_level = ?";
+            $params[] = $data['battery_level'];
+            $types .= "i";
+        }
+        
+        if (empty($updateFields)) {
+            throw new Exception("No fields to update", 400);
+        }
+        
+        $params[] = $data['id'];
+        $types .= "i";
+        
+        $query = "UPDATE drones SET " . implode(", ", $updateFields) . " WHERE id = ?";
+        $stmt = $conn->prepare($query);
+        $stmt->bind_param($types, ...$params);
+        $stmt->execute();
+        
+        if ($stmt->affected_rows === 0) {
+            throw new Exception("Drone not found or no changes made", 404);
+        }
+        
+        // Return updated drone information
+        $stmt = $conn->prepare("SELECT * FROM drones WHERE id = ?");
+        $stmt->bind_param("i", $data['id']);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        $drone = $result->fetch_assoc();
+        
+        return [
+            'status' => 'success',
+            'timestamp' => round(microtime(true) * 1000),
+            'data' => $drone
+        ];
     }
 }
 
-/* get all drones class */
-
-class GetAllDrones
-{
-    public function process($data)
-    {
+class GetAllDrones {
+    public function process($data) {
         $this->validate($data);
+        
         return $this->getDrones($data);
     }
-
-    private function validate($data)
-    {
+    
+    private function validate($data) {
         $required = ['apikey', 'type'];
         foreach ($required as $field) {
             if (empty($data[$field])) {
                 throw new Exception("Field '$field' is required", 400);
             }
         }
+        
+        // Validate API key
+        $this->validateApiKey($data['apikey']);
     }
-
-    private function getDrones($data)
-    {
+    
+    private function validateApiKey($apiKey) {
         $db = Database::getInstance();
         $conn = $db->getConnection();
-
-        // Verify API key (but don't restrict access based on user type)
-        $this->getUserInfoFromApiKey($data['apikey']);
-
-        $query = "SELECT d.id, d.current_operator_id, d.is_available, 
-                         d.latest_latitude, d.latest_longitude, d.altitude, d.battery_level,
-                         u.name AS operator_name
-                  FROM drones d
-                  LEFT JOIN users u ON d.current_operator_id = u.id";
-
-        $stmt = $conn->prepare($query);
+        $stmt = $conn->prepare("SELECT id, user_type FROM users WHERE api_key = ?");
+        $stmt->bind_param("s", $apiKey);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        if ($result->num_rows === 0) {
+            throw new Exception("Invalid API key", 401);
+        }
+        return $result->fetch_assoc();
+    }
+    
+    private function getDrones($data) {
+        $db = Database::getInstance();
+        $conn = $db->getConnection();
+        
+        // Get all drones
+        $stmt = $conn->prepare("
+            SELECT d.*, u.name as operator_name, u.surname as operator_surname 
+            FROM drones d 
+            LEFT JOIN users u ON d.current_operator_id = u.id
+        ");
         $stmt->execute();
         $result = $stmt->get_result();
         $drones = $result->fetch_all(MYSQLI_ASSOC);
-
+        
         return [
             'status' => 'success',
             'timestamp' => round(microtime(true) * 1000),
             'data' => $drones
         ];
     }
-
-    private function getUserInfoFromApiKey($apiKey)
-    {
-        $db = Database::getInstance();
-        $conn = $db->getConnection();
-
-        $stmt = $conn->prepare("SELECT id FROM users WHERE api_key = ?");
-        $stmt->bind_param("s", $apiKey);
-        $stmt->execute();
-        $result = $stmt->get_result();
-
-        if ($result->num_rows === 0) {
-            throw new Exception("Invalid API key", 401);
-        }
-
-        return $result->fetch_assoc();
-    }
 }
-
-
 
 
 
