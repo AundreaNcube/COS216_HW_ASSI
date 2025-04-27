@@ -1,12 +1,16 @@
-# COS216_HW_ASSI
-This is for COS216 homework assignment.
+# COS216 Homework Assignment 
 
-#QUICK QUIDE TASK 2 ::
-After you install nodeJS and npm please run this code:
-->npm install
-make sure ur package.json that u will get when you download that it looks like this:
+## Overview
+This repository contains the WebSocket server implementation for the COS216 homework assignment.
 
-{
+## Quick Start Guide (Task 2)
+
+### Prerequisites
+- Node.js installed (v18+ recommended)
+- npm installed
+
+### package.json
+''' {
   "name": "multi-user-server",
   "version": "1.0.0",
   "description": "WebSocket server for multi-user COS216 HA",
@@ -15,7 +19,13 @@ make sure ur package.json that u will get when you download that it looks like t
     "start": "node src/server.js",
     "test": "echo \"No tests implemented yet\" && exit 0"
   },
-  "keywords": ["websocket", "nodejs", "server", "multi-user", "cos216"],
+  "keywords": [
+    "websocket",
+    "nodejs",
+    "server",
+    "multi-user",
+    "cos216"
+  ],
   "author": "Amantle Keamogetse Temo (u23539764) and Aundrea Ncube (u22747363)",
   "license": "ISC",
   "dependencies": {
@@ -25,16 +35,13 @@ make sure ur package.json that u will get when you download that it looks like t
     "readline-sync": "^1.4.10",
     "async-mutex": "^0.5.0"
   }
-}
+} '''
 
+## Then  run npm install
 
-with regards to the .env you can just replace with ur details .
+## Make sure to modify the.env file
 
-#Example of json body to send when you want to test:
-{
-  "type": "login",
-  "email": "amakea45@icloud.com",
-  "password": "Amantlekea29#"
-}
-
-the other can you please just see the code 
+### Starting the server : 
+1.npm start
+or
+2.node src/server.js 4494
