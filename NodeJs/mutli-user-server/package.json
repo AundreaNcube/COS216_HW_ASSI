@@ -1,0 +1,26 @@
+{
+  "name": "multi-user-server",
+  "version": "1.0.0",
+  "description": "WebSocket server for multi-user COS216 HA",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "test": "echo \"No tests implemented yet\" && exit 0"
+  },
+  "keywords": [
+    "websocket",
+    "nodejs",
+    "server",
+    "multi-user",
+    "cos216"
+  ],
+  "author": "Amantle Keamogetse Temo (u23539764) and Aundrea Ncube (u22747363)",
+  "license": "ISC",
+  "dependencies": {
+    "async-mutex": "^0.5.0",
+    "axios": "^1.9.0",
+    "dotenv": "^16.5.0",
+    "readline-sync": "^1.4.10",
+    "ws": "^8.18.1"
+  }
+}
