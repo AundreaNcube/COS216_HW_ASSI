@@ -1,0 +1,163 @@
+/* Container for centering the form */
+.container {
+  background: linear-gradient(135deg, #e6f0fa 0%, #ffffff 100%);
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+/* Card styling with animation */
+.card {
+  background: #ffffff;
+  border: none;
+  border-radius: 15px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+  padding: 2rem;
+  animation: fadeIn 0.5s ease-in-out;
+  max-width: 400px;
+  width: 100%;
+}
+
+/* Fade-in animation for card */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Header styling */
+h1 {
+  font-family: 'Arial', sans-serif;
+  font-size: 2rem;
+  font-weight: 700;
+  color: #007bff;
+  margin-bottom: 1.5rem;
+}
+
+h1 i {
+  font-size: 1.2rem;
+  font-weight: 400;
+  color: #6c757d;
+}
+
+/* Input box styling */
+.input-box {
+  margin-bottom: 1.5rem;
+}
+
+.input-group {
+  position: relative;
+}
+
+.input-group-text {
+  background-color: #f8f9fa;
+  border: none;
+  border-radius: 8px 0 0 8px;
+  color: #6c757d;
+  transition: background-color 0.3s ease;
+}
+
+.form-control {
+  border: 1px solid #ced4da;
+  border-radius: 0 8px 8px 0;
+  padding: 0.75rem;
+  font-size: 1rem;
+  transition: border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+.form-control:focus {
+  border-color: #007bff;
+  box-shadow: 0 0 8px rgba(0, 123, 255, 0.3);
+  outline: none;
+}
+
+/* Error message styling */
+.text-danger {
+  font-size: 12px;
+  margin-top: 0.25rem;
+  color: #dc3545;
+}
+
+/* Remember me and forgot password */
+.remember-forgot {
+  font-size: 0.9rem;
+  color: #6c757d;
+  margin-bottom: 1.5rem;
+}
+
+.remember-forgot a {
+  color: #007bff;
+  text-decoration: none;
+  transition: color 0.3s ease;
+}
+
+.remember-forgot a:hover {
+  color: #0056b3;
+  text-decoration: underline;
+}
+
+/* Submit button */
+.btn-primary {
+  background-color: #007bff;
+  border: none;
+  border-radius: 8px;
+  padding: 0.75rem;
+  font-size: 1rem;
+  font-weight: 600;
+  transition: background-color 0.3s ease, transform 0.2s ease;
+}
+
+.btn-primary:hover {
+  background-color: #0056b3;
+  transform: translateY(-2px);
+}
+
+.btn-primary:disabled {
+  background-color: #6c757d;
+  cursor: not-allowed;
+}
+
+/* Register link */
+.register-link p {
+  font-size: 0.9rem;
+  color: #6c757d;
+}
+
+.register-link a {
+  color: #007bff;
+  font-weight: 600;
+  text-decoration: none;
+  transition: color 0.3s ease;
+}
+
+.register-link a:hover {
+  color: #0056b3;
+  text-decoration: underline;
+}
+
+/* Responsive adjustments */
+@media (max-width: 576px) {
+  .card {
+    padding: 1.5rem;
+  }
+
+  h1 {
+    font-size: 1.5rem;
+  }
+
+  h1 i {
+    font-size: 1rem;
+  }
+
+  .form-control,
+  .btn-primary {
+    font-size: 0.9rem;
+  }
+}
