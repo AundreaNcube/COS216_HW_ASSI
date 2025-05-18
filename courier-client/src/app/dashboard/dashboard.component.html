@@ -1,0 +1,187 @@
+<div class="container">
+  <div class="dashboard-header">
+    <h2>{{ userType === 'Customer' ? 'Customer Dashboard' : userType === 'Distributor' ? 'Distributor Dashboard' : 'Courier Dashboard' }}</h2>
+    <button class="btn btn-secondary" (click)="logout()">Logout</button>
+  </div>
+  <div class="alert alert-danger" *ngIf="errorMessage">{{ errorMessage }}</div>
+
+  <!-- Customer View -->
+  <div *ngIf="userType === 'Customer'">
+    <h3>Outstanding Orders</h3>
+    <div class="loading" *ngIf="!orders">Loading orders...</div>
+    <div class="orders-list" id="orders-list">
+      <div *ngIf="orders && orders.length === 0" class="no-orders">
+        No Outstanding Orders Available
+      </div>
+      <div *ngFor="let order of orders" class="order-card" (click)="selectOrder(order.order_id)" [class.selected]="selectedOrderId === order.order_id">
+        <div class="order-header">
+          <div>
+            <span class="order-id">Order #{{ order.order_id }}</span>
+            <span class="order-date">Placed on {{ order.createdAt | date:'longDate' }}</span>
+          </div>
+          <span class="order-status status-processing">{{ order.state.toUpperCase() }}</span>
+        </div>
+        <div class="order-details">
+          <div class="order-products" *ngIf="order.isValid">
+            <div class="order-product" *ngFor="let product of order.products">
+              <img [src]="product.image_url || 'assets/placeholder.png'" [alt]="formatTitle(product.title)" class="product-image">
+              <div class="product-info">
+                <div class="product-name">{{ formatTitle(product.title) }}</div>
+                <div class="product-price">{{ currencyChoice }} {{ convertPrice(product.final_price || 0) }}</div>
+                <div class="product-quantity">Quantity: {{ product.quantity }}</div>
+              </div>
+            </div>
+          </div>
+          <div class="order-products" *ngIf="!order.isValid">
+            <p class="no-products">No products available for this order.</p>
+          </div>
+          <div class="order-summary" *ngIf="order.isValid">
+            <div class="summary-title">Order Summary</div>
+            <div class="summary-row">
+              <span>Subtotal:</span>
+              <span>{{ currencyChoice }} {{ convertPrice(getOrderSubtotal(order)) }}</span>
+            </div>
+            <div class="summary-row">
+              <span>Shipping:</span>
+              <span>{{ currencyChoice }} {{ convertPrice(shipping) }}</span>
+            </div>
+            <div class="summary-row">
+              <span>Tax:</span>
+              <span>{{ currencyChoice }} {{ convertPrice(getOrderTax(order)) }}</span>
+            </div>
+            <div class="summary-row summary-total">
+              <span>Total:</span>
+              <span>{{ currencyChoice }} {{ convertPrice(getOrderTotal(order)) }}</span>
+            </div>
+          </div>
+        </div>
+        <div class="delivery-info">
+          <div class="delivery-title">
+            <i class="fas fa-rocket"></i>
+            <span>Delivery Information</span>
+          </div>
+          <div class="delivery-date">Estimated Delivery: {{ order.delivery_date | date:'fullDate' || 'Pending' }}</div>
+        </div>
+      </div>
+    </div>
+    <button class="btn btn-primary" (click)="requestDelivery()" [disabled]="!selectedOrderId || isRequestingDelivery">
+      {{ isRequestingDelivery ? 'Requesting...' : 'Request Delivery' }}
+    </button>
+  </div>
+
+  <!-- Courier/Distributor View -->
+  <div *ngIf="userType !== 'Customer'">
+    <h3>Requested Deliveries</h3>
+    <div class="loading" *ngIf="!deliveryRequests">Loading delivery requests...</div>
+    <div class="orders-list" id="delivery-requests-list">
+      <div *ngIf="deliveryRequests && deliveryRequests.length === 0" class="no-orders">
+        No Delivery Requests Available
+      </div>
+      <div *ngFor="let request of deliveryRequests" class="order-card" (click)="selectOrder(request.order_id)" [class.selected]="selectedOrderId === request.order_id">
+        <div class="order-header">
+          <div>
+            <span class="order-id">Order #{{ request.order_id }}</span>
+            <span class="order-date">Requested by {{ request.customer_email }}</span>
+          </div>
+          <span class="order-status status-processing">REQUESTED</span>
+        </div>
+      </div>
+    </div>
+
+    <h3>Currently Delivering Orders</h3>
+    <div class="loading" *ngIf="!deliveringOrders">Loading delivering orders...</div>
+    <div class="orders-list" id="delivering-orders-list">
+      <div *ngIf="deliveringOrders && deliveringOrders.length === 0" class="no-orders">
+        No Orders Currently Delivering
+      </div>
+      <div *ngFor="let order of deliveringOrders" class="order-card">
+        <div class="order-header">
+          <div>
+            <span class="order-id">Order #{{ order.order_id }}</span>
+            <span class="order-date">Recipient: {{ order.recipient.name }} {{ order.recipient.surname }}</span>
+          </div>
+          <span class="order-status status-processing">OUT FOR DELIVERY</span>
+        </div>
+        <div class="order-details">
+          <div class="order-products">
+            <div class="order-product" *ngFor="let product of order.products">
+              <div class="product-info">
+                <div class="product-name">{{ formatTitle(product.title) }}</div>
+                <div class="product-quantity">Quantity: {{ product.quantity }}</div>
+              </div>
+            </div>
+          </div>
+          <div class="order-summary">
+            <div class="summary-title">Delivery Details</div>
+            <div class="summary-row">
+              <span>Destination:</span>
+              <span>[{{ order.destination[0] }}, {{ order.destination[1] }}]</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <h3>Drone Status</h3>
+    <app-map></app-map>
+    <div class="button-container">
+      <button class="btn btn-secondary" (click)="refreshDrones()">Refresh Drones</button>
+    </div>
+    <div class="loading" *ngIf="!drones">Loading drone status...</div>
+    <div class="drone-list">
+      <div *ngIf="drones && drones.length === 0" class="no-orders">
+        No Drones Available
+      </div>
+      <div *ngFor="let drone of drones" class="drone-card" (click)="selectDrone(drone.id)" [class.selected]="selectedDroneId === drone.id">
+        <div class="drone-header">
+          <span>Drone #{{ drone.id }}</span>
+          <span class="drone-status">{{ drone.is_available ? 'Available' : 'In Use' }}</span>
+        </div>
+        <div class="drone-details">
+          <p>Battery: {{ drone.battery_level }}%</p>
+          <p>Altitude: {{ drone.altitude }}m</p>
+          <p>GPS: [{{ drone.gps_coordinates[0] }}, {{ drone.gps_coordinates[1] }}]</p>
+          <p>Operator: {{ drone.current_operator.name }} {{ drone.current_operator.surname }}</p>
+          <p>Delivering: {{ drone.is_delivering ? 'Yes' : 'No' }}</p>
+          <p *ngIf="drone.order_id">Linked Order: #{{ drone.order_id }}</p>
+        </div>
+      </div>
+    </div>
+
+    <h3 *ngIf="userType === 'Courier'">Orders Due for Delivery</h3>
+    <div *ngIf="userType === 'Courier'" class="orders-list" id="orders-list">
+      <div class="loading" *ngIf="!orders">Loading orders...</div>
+      <div *ngIf="orders && orders.length === 0" class="no-orders">
+        No Orders Due for Delivery
+      </div>
+      <div *ngFor="let order of orders" class="order-card" (click)="selectOrder(order.order_id)" [class.selected]="selectedOrderId === order.order_id">
+        <div class="order-header">
+          <div>
+            <span class="order-id">Order #{{ order.order_id }}</span>
+            <span class="order-date">Placed on {{ order.createdAt | date:'longDate' }}</span>
+          </div>
+          <span class="order-status status-processing">{{ order.state.toUpperCase() }}</span>
+        </div>
+        <div class="order-details">
+          <div class="order-products" *ngIf="order.isValid">
+            <div class="order-product" *ngFor="let product of order.products">
+              <img [src]="product.image_url || 'assets/placeholder.png'" [alt]="formatTitle(product.title)" class="product-image">
+              <div class="product-info">
+                <div class="product-name">{{ formatTitle(product.title) }}</div>
+                <div class="product-price">{{ currencyChoice }} {{ convertPrice(product.final_price || 0) }}</div>
+                <div class="product-quantity">Quantity: {{ product.quantity }}</div>
+              </div>
+            </div>
+          </div>
+          <div class="order-products" *ngIf="!order.isValid">
+            <p class="no-products">No products available for this order.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+    <button class="btn btn-primary" (click)="requestDelivery()" 
+            [disabled]="!selectedOrderId || !selectedDroneId || isRequestingDelivery || !isDroneAvailable()">
+      {{ isRequestingDelivery ? 'Starting Delivery...' : 'Start Delivery' }}
+    </button>
+  </div>
+</div>

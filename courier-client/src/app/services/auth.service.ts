@@ -8,7 +8,7 @@ import { Router } from '@angular/router';
   providedIn: 'root'
 })
 export class AuthService {
-  private apiUrl = 'http://your-api-url/api'; // Replace with your actual API URL
+  private apiUrl = 'https://wheatley.cs.up.ac.za/u23539764/api2.php'; // Replace with your actual API URL
   private isAuthenticated = false;
 
   constructor(

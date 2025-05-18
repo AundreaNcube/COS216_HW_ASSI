@@ -1,163 +1,187 @@
-/* Container for centering the form */
-.container {
-  background: linear-gradient(135deg, #e6f0fa 0%, #ffffff 100%);
+/* Modern CSS Reset */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+/* Gorgeous Background with Gradient */
+:host {
   min-height: 100vh;
   display: flex;
-  align-items: center;
   justify-content: center;
+  align-items: center;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   padding: 20px;
 }
 
-/* Card styling with animation */
-.card {
-  background: #ffffff;
-  border: none;
-  border-radius: 15px;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
-  padding: 2rem;
-  animation: fadeIn 0.5s ease-in-out;
-  max-width: 400px;
+/* Container Styling */
+.container {
   width: 100%;
+  max-width: 400px;
+  margin: 0 auto;
+  perspective: 1000px;
 }
 
-/* Fade-in animation for card */
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+/* Login Box with Glass Morphism Effect */
+.login-box {
+  padding: 35px 30px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.9);
+  box-shadow: 0 8px 32px rgba(31, 38, 135, 0.2);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  transform-style: preserve-3d; 
+  transition: transform 0.5s ease, box-shadow 0.5s ease;
 }
 
-/* Header styling */
-h1 {
-  font-family: 'Arial', sans-serif;
-  font-size: 2rem;
-  font-weight: 700;
-  color: #007bff;
-  margin-bottom: 1.5rem;
+.login-box:hover {
+  /* transform: translateY(-5px) rotateX(5deg); */
+  box-shadow: 0 15px 35px rgba(31, 38, 135, 0.25);
 }
 
-h1 i {
-  font-size: 1.2rem;
-  font-weight: 400;
-  color: #6c757d;
-}
-
-/* Input box styling */
-.input-box {
-  margin-bottom: 1.5rem;
-}
-
-.input-group {
+/* Heading Styling */
+h2 {
+  margin-bottom: 25px;
+  color: #4a3f8a;
+  font-weight: 600;
+  text-align: center;
+  font-size: 28px;
+  letter-spacing: 0.5px;
   position: relative;
 }
 
-.input-group-text {
-  background-color: #f8f9fa;
-  border: none;
-  border-radius: 8px 0 0 8px;
-  color: #6c757d;
-  transition: background-color 0.3s ease;
+h2::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  bottom: -8px;
+  width: 50px;
+  height: 3px;
+  background: linear-gradient(90deg, #667eea, #764ba2);
+  transform: translateX(-50%);
+  border-radius: 3px;
 }
 
+/* Form Groups */
+.form-group {
+  margin-bottom: 22px;
+  position: relative;
+}
+
+/* Labels with Animation */
+label {
+  display: block;
+  margin-bottom: 6px;
+  color: #555;
+  font-size: 14px;
+  font-weight: 500;
+  transition: all 0.3s ease;
+  transform-origin: left;
+}
+
+/* Beautiful Inputs */
 .form-control {
-  border: 1px solid #ced4da;
-  border-radius: 0 8px 8px 0;
-  padding: 0.75rem;
-  font-size: 1rem;
-  transition: border-color 0.3s ease, box-shadow 0.3s ease;
+  width: 100%;
+  padding: 12px 15px;
+  border-radius: 8px;
+  border: 2px solid #e0e0e0;
+  outline: none;
+  font-size: 15px;
+  color: #333;
+  background: #f9f9f9;
+  transition: all 0.3s ease;
 }
 
 .form-control:focus {
-  border-color: #007bff;
-  box-shadow: 0 0 8px rgba(0, 123, 255, 0.3);
-  outline: none;
+  border-color: #667eea;
+  background: #fff;
+  box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.15);
 }
 
-/* Error message styling */
-.text-danger {
-  font-size: 12px;
-  margin-top: 0.25rem;
-  color: #dc3545;
+.form-control::placeholder {
+  color: #aaa;
+  opacity: 1;
 }
 
-/* Remember me and forgot password */
-.remember-forgot {
-  font-size: 0.9rem;
-  color: #6c757d;
-  margin-bottom: 1.5rem;
-}
-
-.remember-forgot a {
-  color: #007bff;
-  text-decoration: none;
-  transition: color 0.3s ease;
-}
-
-.remember-forgot a:hover {
-  color: #0056b3;
-  text-decoration: underline;
-}
-
-/* Submit button */
+/* Button with Animation */
 .btn-primary {
-  background-color: #007bff;
+  width: 100%;
+  padding: 13px 10px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   border: none;
   border-radius: 8px;
-  padding: 0.75rem;
-  font-size: 1rem;
+  color: white;
+  font-size: 16px;
   font-weight: 600;
-  transition: background-color 0.3s ease, transform 0.2s ease;
+  letter-spacing: 0.5px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 10px rgba(118, 75, 162, 0.3);
+  margin-top: 10px;
 }
 
 .btn-primary:hover {
-  background-color: #0056b3;
+  background: linear-gradient(135deg, #5a72e2 0%, #6a3f99 100%);
+  box-shadow: 0 6px 15px rgba(118, 75, 162, 0.4);
   transform: translateY(-2px);
 }
 
-.btn-primary:disabled {
-  background-color: #6c757d;
-  cursor: not-allowed;
+.btn-primary:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 8px rgba(118, 75, 162, 0.4);
 }
 
-/* Register link */
-.register-link p {
-  font-size: 0.9rem;
-  color: #6c757d;
+/* Error Message Styling */
+.alert-danger {
+  color: #842029;
+  background-color: #f8d7da;
+  border: 1px solid #f5c2c7;
+  padding: 12px 15px;
+  margin-bottom: 20px;
+  border-radius: 8px;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  animation: shake 0.5s ease-in-out;
 }
 
-.register-link a {
-  color: #007bff;
-  font-weight: 600;
-  text-decoration: none;
-  transition: color 0.3s ease;
+.alert-danger::before {
+  content: "⚠️";
+  margin-right: 8px;
+  font-size: 16px;
 }
 
-.register-link a:hover {
-  color: #0056b3;
-  text-decoration: underline;
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  20%, 60% { transform: translateX(-5px); }
+  40%, 80% { transform: translateX(5px); }
 }
 
-/* Responsive adjustments */
-@media (max-width: 576px) {
-  .card {
-    padding: 1.5rem;
+/* Form Animation */
+form {
+  animation: formIn 0.6s ease-out;
+}
+
+@keyframes formIn {
+  0% { 
+    opacity: 0;
+    transform: translateY(20px); 
   }
-
-  h1 {
-    font-size: 1.5rem;
+  100% { 
+    opacity: 1;
+    transform: translateY(0); 
   }
+}
 
-  h1 i {
-    font-size: 1rem;
+/* Responsive Adjustments */
+@media (max-width: 480px) {
+  .login-box {
+    padding: 25px 20px;
   }
-
-  .form-control,
-  .btn-primary {
-    font-size: 0.9rem;
+  
+  h2 {
+    font-size: 24px;
   }
 }

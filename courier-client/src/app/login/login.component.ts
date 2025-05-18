@@ -1,91 +1,102 @@
 import { Component } from '@angular/core';
+import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { ToastrService } from 'ngx-toastr';
+import { Router } from '@angular/router';
+import { LoginService } from '../services/login.service';
 import { WebsocketService } from '../services/websocket.service';
 
 @Component({
   selector: 'app-login',
   standalone: true,
-  imports: [FormsModule],
+  imports: [CommonModule, FormsModule],
   templateUrl: './login.component.html',
   styleUrls: ['./login.component.css']
 })
 export class LoginComponent {
   email: string = '';
   password: string = '';
-  rememberMe: boolean = false;
-
-  private loginAttempts: number = 0;
-  private readonly maxAttempts: number = 5;
-  private lockoutUntil: number = 0;
+  errorMessage: string = '';
 
   constructor(
-    private toastr: ToastrService,
-    private websocketService: WebsocketService
-  ) {
-    this.websocketService.getMessages().subscribe({
-      next: (message) => this.handleWebSocketMessage(message),
-      error: (error) => this.toastr.error('WebSocket error: ' + error)
-    });
-  }
+    private loginService: LoginService,
+    private websocketService: WebsocketService,
+    private router: Router
+  ) {}
 
-  onSubmit() {
-    const now = Date.now();
-    if (this.lockoutUntil > now) {
-      const secondsLeft = Math.ceil((this.lockoutUntil - now) / 1000);
-      this.toastr.error(`Please wait ${secondsLeft} seconds`);
-      return;
-    }
-
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
-
-    if (!emailRegex.test(this.email)) {
-      this.toastr.error('Invalid email format');
-      this.handleFailedAttempt();
-      return;
-    }
-
-    if (!passwordRegex.test(this.password)) {
-      this.toastr.error('Must contain uppercase(A-Z), lowercase(a-z), number(0-9), and special character (8+ chars)');
-      this.handleFailedAttempt();
-      return;
-    }
-
-    this.websocketService.sendMessage({
-      type: 'login',
+  login(): void {
+    console.log('Login attempt:', {
       email: this.email,
-      password: this.password
+      password: this.password ? '[REDACTED]' : 'MISSING'
+    });
+
+    // Step 1: Authenticate via REST API
+    this.loginService.login(this.email, this.password).subscribe({
+      next: (response) => {
+        console.log('REST API login response:', JSON.stringify(response, null, 2));
+        localStorage.clear();
+        localStorage.setItem('apikey', response.apikey);
+        localStorage.setItem('email', this.email);
+        localStorage.setItem('userType', response.userType);
+
+        // Step 2: Authenticate via WebSocket
+        this.websocketService.sendMessage({ type: 'login', email: this.email, password: this.password });
+
+        // Subscribe to WebSocket messages for login response
+        const subscription = this.websocketService.getMessages().subscribe({
+          next: (message) => {
+            console.log('WebSocket message:', JSON.stringify(message, null, 2));
+            if (message.type === 'login_success') {
+              console.log('WebSocket login successful:', {
+                sessionId: message.sessionId,
+                userType: message.userType
+              });
+              localStorage.setItem('userType', message.userType);
+              this.navigateToDashboard(subscription);
+            } else if (message.type === 'error' || message.type === 'auth_error' || message.type === 'connection_error') {
+              console.error('WebSocket login error:', message.message);
+              this.errorMessage = message.message === 'Connected to HTTP server instead of WebSocket. Check server configuration.'
+                ? 'WebSocket server misconfigured. Contact support or try again later.'
+                : message.message || 'WebSocket authentication failed';
+              localStorage.clear();
+              subscription.unsubscribe();
+            }
+          },
+          error: (err) => {
+            console.error('WebSocket subscription error:', err);
+            this.errorMessage = 'Failed to connect to WebSocket server. Please try again later.';
+            localStorage.clear();
+            subscription.unsubscribe();
+          }
+        });
+      },
+      error: (error) => {
+        console.error('REST API login error:', {
+          message: error.message,
+          status: error.status,
+          details: JSON.stringify(error, null, 2)
+        });
+        this.errorMessage = error.message.includes('CORS error')
+          ? 'CORS policy error. The server is not configured to allow requests from this application. Contact support.'
+          : error.status === 0
+            ? 'Cannot connect to the API server. Check your network or contact support.'
+            : error.message || 'Login failed';
+      }
     });
   }
 
-  private handleWebSocketMessage(message: any) {
-    if (message.type === 'login_success') {
-      this.loginAttempts = 0;
-      localStorage.setItem('apikey', message.apikey);
-      localStorage.setItem('name', message.name);
-      localStorage.setItem('surname', message.surname);
-      localStorage.setItem('userType', message.userType);
-      localStorage.setItem('preferences', JSON.stringify(message.preferences));
-      this.toastr.success(`Welcome ${message.name} ${message.surname}!`);
-      if (this.rememberMe) {
-        localStorage.setItem('rememberMe', 'true');
-        localStorage.setItem('email', this.email);
-      }
-    } else if (message.type === 'error') {
-      this.handleFailedAttempt();
-      this.toastr.error(message.message);
-      if (message.lockout_until) {
-        this.lockoutUntil = message.lockout_until;
-      }
-    }
+  private navigateToDashboard(subscription: any): void {
+    this.router.navigate(['/dashboard']).then(success => {
+      console.log('Navigation to dashboard successful:', success);
+      subscription.unsubscribe();
+    }).catch(err => {
+      console.error('Navigation to dashboard failed:', err);
+      this.errorMessage = 'Navigation failed. Please try again.';
+      subscription.unsubscribe();
+    });
   }
 
-  private handleFailedAttempt() {
-    this.loginAttempts++;
-    if (this.loginAttempts >= this.maxAttempts) {
-      this.lockoutUntil = Date.now() + 2 * 60 * 1000; // 2-minute lockout
-      this.toastr.error('Too many login attempts. Please wait.');
-    }
+  logout(): void {
+    localStorage.clear();
+    this.router.navigate(['/login']);
   }
 }

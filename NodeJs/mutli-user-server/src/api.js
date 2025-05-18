@@ -1,12 +1,7 @@
-
-//////////////////////////////////:modules:
 require('dotenv').config();
 const axios = require('axios');
 const Logger = require('./logger');
 
-
-
-/////////////////////////////////////////connection to API:
 const WHEATLEY_USERNAME = process.env.WHEATLEY_USERNAME;
 const WHEATLEY_PASSWORD = process.env.WHEATLEY_PASSWORD;
 const WHEATLEY_BASE_URL = 'https://wheatley.cs.up.ac.za/u23539764/api2.php';
@@ -16,27 +11,18 @@ if (!WHEATLEY_USERNAME || !WHEATLEY_PASSWORD) {
     throw new Error('Missing Wheatley credentials in .env');
 }
 
-
-
-
-////////////:axios
 const axiosInstance = axios.create({
     baseURL: WHEATLEY_BASE_URL,
-    timeout: 10000, // Increased from 5000ms for reliability
+    timeout: 10000,
     headers: {
         'Content-Type': 'application/json',
         'Authorization': `Basic ${Buffer.from(`${WHEATLEY_USERNAME}:${WHEATLEY_PASSWORD}`).toString('base64')}`
     }
 });
 
-
-
-///////////////////////request function::
-
 async function createRequest(type, data) {
     const requestBody = { type, ...data };
     try {
-    
         Logger.info(`API Request ${JSON.stringify(requestBody)}`);
         const response = await axiosInstance.post('', requestBody);
         Logger.info(`API Response ${JSON.stringify({
@@ -63,10 +49,6 @@ async function createRequest(type, data) {
     }
 }
 
-
-
-/////////////////////////////:::login
-
 async function loginUser(email, password) {
     try {
         const data = await createRequest('Login', { email, password });
@@ -83,9 +65,6 @@ async function loginUser(email, password) {
     }
 }
 
-
-
-/////////////////::validate
 async function validateApiKey(apiKey) {
     try {
         const userInfo = await createRequest('GetUserInfo', { apikey: apiKey });
@@ -102,11 +81,6 @@ async function validateApiKey(apiKey) {
     }
 }
 
-
-
-
-
-//////////////////////////:get all orders
 async function getAllOrders(apiKey) {
     try {
         const orders = await createRequest('GetAllOrders', { apikey: apiKey });
@@ -117,9 +91,6 @@ async function getAllOrders(apiKey) {
     }
 }
 
-
-
-/////////////////: create a new order
 async function createOrder(apiKey, destination_latitude, destination_longitude, products) {
     try {
         const order = await createRequest('CreateOrder', {
@@ -135,10 +106,6 @@ async function createOrder(apiKey, destination_latitude, destination_longitude, 
     }
 }
 
-
-
-
-///////////////////////:update order's state
 async function updateOrder(apiKey, order_id, state) {
     try {
         const result = await createRequest('UpdateOrder', {
@@ -153,10 +120,6 @@ async function updateOrder(apiKey, order_id, state) {
     }
 }
 
-
-
-
-//////////////////////: create a new drone
 async function createDrone(apiKey, options = {}) {
     try {
         const data = { apikey: apiKey };
@@ -165,6 +128,7 @@ async function createDrone(apiKey, options = {}) {
         if (options.altitude !== undefined) data.altitude = options.altitude;
         if (options.battery_level !== undefined) data.battery_level = options.battery_level;
         if (options.current_operator_id !== undefined) data.current_operator_id = options.current_operator_id;
+        if (options.order_id !== undefined) data.order_id = options.order_id;
 
         const drone = await createRequest('CreateDrone', data);
         Logger.info(`Drone created successfully: ${JSON.stringify(drone)}`);
@@ -174,10 +138,6 @@ async function createDrone(apiKey, options = {}) {
     }
 }
 
-
-
-
-//////////////////////: get all drones
 async function getAllDrones(apiKey) {
     try {
         const drones = await createRequest('GetAllDrones', { apikey: apiKey });
@@ -188,11 +148,6 @@ async function getAllDrones(apiKey) {
     }
 }
 
-
-
-
-
-////////////////////////// update drone's status
 async function updateDrone(apiKey, id, options = {}) {
     try {
         const data = { apikey: apiKey, id };
@@ -202,6 +157,7 @@ async function updateDrone(apiKey, id, options = {}) {
         if (options.latest_longitude !== undefined) data.latest_longitude = options.latest_longitude;
         if (options.altitude !== undefined) data.altitude = options.altitude;
         if (options.battery_level !== undefined) data.battery_level = options.battery_level;
+        if (options.order_id !== undefined) data.order_id = options.order_id;
 
         const result = await createRequest('UpdateDrone', data);
         Logger.info(`Drone ${id} updated successfully: ${JSON.stringify(result)}`);
@@ -211,9 +167,6 @@ async function updateDrone(apiKey, id, options = {}) {
     }
 }
 
-
-
-///////////////////////////:get order details
 async function getOrderDetails(apiKey, customer_id) {
     try {
         const userInfo = await createRequest('GetUserById', { apikey: apiKey, user_id: customer_id });
@@ -229,13 +182,16 @@ async function getOrderDetails(apiKey, customer_id) {
     }
 }
 
+async function currentlyDelivering(apiKey) {
+    try {
+        const orders = await createRequest('CurrentlyDelivering', { apikey: apiKey });
+        Logger.info(`Successfully fetched ${orders.length} delivering orders`);
+        return orders;
+    } catch (error) {
+        throw error;
+    }
+}
 
-
-
-
-
-
-///////////////////////////:export functions
 module.exports = {
     loginUser,
     validateApiKey,
@@ -245,5 +201,6 @@ module.exports = {
     getAllDrones,
     updateDrone,
     createDrone,
-    getOrderDetails
+    getOrderDetails,
+    currentlyDelivering
 };

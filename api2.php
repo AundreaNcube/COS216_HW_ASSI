@@ -5,6 +5,7 @@ Aundrea Ncube u22747363
 */
 
 header('Access-Control-Allow-Origin: *');
+header('Access-Control-Allow-Origin: http://localhost:4200');
 header('Access-Control-Allow-Methods: POST, OPTIONS');
 header('Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With');
 header('Content-Type: application/json');
@@ -146,6 +147,16 @@ class HandleRequest
                 break;
             case 'GetUserById':
                 $handler = new GetUserById();
+                $response = $handler->process($input);
+                $this->sendResponse(200, $response);
+                break;
+            case 'CurrentlyDelivering':
+                $handler = new CurrentlyDelivering();
+                $response = $handler->process($input);
+                $this->sendResponse(200, $response);
+                break;
+            case 'GetDeliveryRequests':
+                $handler = new GetDeliveryRequests();
                 $response = $handler->process($input);
                 $this->sendResponse(200, $response);
                 break;
@@ -907,6 +918,64 @@ class GetAllOrders
 }
 
 
+
+class GetDeliveryRequests
+{
+    public function process($data)
+    {
+        $data = $this->validate($data);
+        return $this->getRequests($data);
+    }
+
+    private function validate($data)
+    {
+        $required = ['apikey', 'type'];
+        foreach ($required as $field) {
+            if (!isset($data[$field]) || empty($data[$field])) {
+                throw new Exception("Field '$field' is required", 400);
+            }
+        }
+
+        $db = Database::getInstance();
+        $conn = $db->getConnection();
+        $stmt = $conn->prepare("SELECT id, user_type, email FROM users WHERE api_key = ?");
+        if (!$stmt) {
+            error_log("Prepare failed for API key validation: " . $conn->error);
+            throw new Exception("Database error: Failed to validate API key", 500);
+        }
+        $stmt->bind_param("s", $data['apikey']);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        if ($result->num_rows === 0) {
+            throw new Exception("Invalid API key", 401);
+        }
+        $user = $result->fetch_assoc();
+        if (!in_array($user['user_type'], ['Courier', 'Distributor'])) {
+            throw new Exception("Only Couriers and Distributors can view delivery requests", 403);
+        }
+        $data['user_id'] = $user['id'];
+        $data['user_type'] = $user['user_type'];
+        $data['email'] = $user['email'];
+
+        return $data;
+    }
+
+    private function getRequests($data)
+    {
+        // Note: Since deliveryRequests is managed in server.js, this endpoint simulates fetching from a database.
+        // In a real system, you'd store requests in a database table.
+        // For now, return an empty array as server.js handles the actual requests via WebSocket.
+        return [
+            'status' => 'success',
+            'timestamp' => round(microtime(true) * 1000),
+            'data' => []
+        ];
+    }
+}
+
+
+
+
 class CreateDrone
 {
     public function __construct() {}
@@ -1004,8 +1073,6 @@ class CreateDrone
         ];
     }
 }
-
-
 
 class UpdateDrone
 {
@@ -1309,6 +1376,114 @@ class GetUserById
 }
 
 
+
+class CurrentlyDelivering
+{
+    public function process($data)
+    {
+        $data = $this->validate($data);
+        return $this->getDeliveringOrders($data);
+    }
+
+    private function validate($data)
+    {
+        $required = ['apikey', 'type'];
+        foreach ($required as $field) {
+            if (!isset($data[$field]) || empty($data[$field])) {
+                throw new Exception("Field '$field' is required", 400);
+            }
+        }
+
+        $db = Database::getInstance();
+        $conn = $db->getConnection();
+        $stmt = $conn->prepare("SELECT id, user_type FROM users WHERE api_key = ?");
+        if (!$stmt) {
+            error_log("Prepare failed for API key validation: " . $conn->error);
+            throw new Exception("Database error: Failed to validate API key", 500);
+        }
+        $stmt->bind_param("s", $data['apikey']);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        if ($result->num_rows === 0) {
+            throw new Exception("Invalid API key", 401);
+        }
+        $user = $result->fetch_assoc();
+        if (!in_array($user['user_type'], ['Customer', 'Courier', 'Distributor'])) {
+            throw new Exception("Only Customers, Couriers, or Distributors can view delivering orders", 403);
+        }
+        $data['user_id'] = $user['id'];
+        $data['user_type'] = $user['user_type'];
+
+        return $data;
+    }
+
+    private function getDeliveringOrders($data)
+    {
+        $db = Database::getInstance();
+        $conn = $db->getConnection();
+        $query = "
+            SELECT o.order_id, o.tracking_num, o.destination_latitude, o.destination_longitude, o.state, o.delivery_date, o.customer_id,
+                   op.product_id, op.quantity, p.title, p.image_url,
+                   u.name AS customer_name, u.surname AS customer_surname
+            FROM orders o
+            LEFT JOIN orders_products op ON o.order_id = op.order_id
+            LEFT JOIN products p ON op.product_id = p.id
+            LEFT JOIN users u ON o.customer_id = u.id
+            WHERE o.state = 'Out for delivery'
+        ";
+        if ($data['user_type'] === 'Customer') {
+            $query .= " AND o.customer_id = ?";
+        }
+        $stmt = $conn->prepare($query);
+        if (!$stmt) {
+            error_log("Prepare failed for delivering orders query: " . $conn->error);
+            throw new Exception("Database error: Failed to retrieve delivering orders - " . $conn->error, 500);
+        }
+        if ($data['user_type'] === 'Customer') {
+            $stmt->bind_param("i", $data['user_id']);
+        }
+        $stmt->execute();
+        $result = $stmt->get_result();
+        $orders = [];
+        $current_order = null;
+        while ($row = $result->fetch_assoc()) {
+            if (!$current_order || $current_order['order_id'] !== $row['order_id']) {
+                if ($current_order) {
+                    $orders[] = $current_order;
+                }
+                $current_order = [
+                    'order_id' => $row['order_id'],
+                    'tracking_num' => $row['tracking_num'],
+                    'destination' => [$row['destination_latitude'], $row['destination_longitude']],
+                    'state' => $row['state'],
+                    'delivery_date' => $row['delivery_date'],
+                    'customer_id' => $row['customer_id'],
+                    'recipient' => [
+                        'name' => $row['customer_name'],
+                        'surname' => $row['customer_surname']
+                    ],
+                    'products' => []
+                ];
+            }
+            if ($row['product_id']) {
+                $current_order['products'][] = [
+                    'product_id' => $row['product_id'],
+                    'quantity' => $row['quantity'],
+                    'title' => $row['title'],
+                    'image_url' => $row['image_url']
+                ];
+            }
+        }
+        if ($current_order) {
+            $orders[] = $current_order;
+        }
+        return [
+            'status' => 'success',
+            'timestamp' => round(microtime(true) * 1000),
+            'data' => $orders
+        ];
+    }
+}
 
 
 (new HandleRequest())->handleRequest();
