@@ -5,3 +5,9 @@ node_modules/
 
 # Ignore server log files
 server.log
+
+
+angular.json
+package-lock.json
+package.json
+.nmprc.backup

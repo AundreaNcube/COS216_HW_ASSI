@@ -17,10 +17,10 @@
   "author": "Amantle Keamogetse Temo (u23539764) and Aundrea Ncube (u22747363)",
   "license": "ISC",
   "dependencies": {
-    "async-mutex": "^0.5.0",
     "axios": "^1.9.0",
     "dotenv": "^16.5.0",
+    "ws": "^8.18.1",
     "readline-sync": "^1.4.10",
-    "ws": "^8.18.1"
+    "async-mutex": "^0.5.0"
   }
 }
